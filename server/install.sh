@@ -1,6 +1,7 @@
 sudo ls >> /dev/null
 echo 'deb http://code.golems.org/debian squeeze golems.org' | sudo tee --append /etc/apt/sources.list
 sudo apt-get update
+apt-get install openbsd-inetd
 sudo apt-get install build-essential
 sudo apt-get install python-dev
 sudo apt-get install linux-headers-$(uname -r)
@@ -22,6 +23,11 @@ sudo apt-get install libach*
 #./configure 
 #make
 #sudo make install
+
+
+
+echo '8076  stream  tcp  nowait  nobody  /usr/local/bin/achd /usr/local/bin/achd serve' | sudo tee --append /etc/inetd.conf
+sudo service openbsd-inetd restart
 
 sudo apt-get install python-pip
 sudo pip install http://code.golems.org/src/ach/py_ach-latest.tar.gz

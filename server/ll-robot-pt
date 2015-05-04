@@ -22,6 +22,7 @@ Kill()
 {
 
         screen -X -S $NAME_SERVER kill
+        sudo ach -U $LL_PT_REF_CHAN
         #sudo kill -9 $(pidof hubo-log)
 }
 
