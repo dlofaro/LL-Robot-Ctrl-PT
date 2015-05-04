@@ -14,12 +14,6 @@ var UI = require('ui');
 
 var i = 0;
 
-
-
-//var ipServer = '162.243.253.135';
-//var portServer = '8085';
-//var base_url = "http://"+ipServer+":"+portServer;
-
 function sendBuffer(b) {
 //  var response;
   var req = new XMLHttpRequest();
