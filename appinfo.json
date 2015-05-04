@@ -1,0 +1,40 @@
+{
+    "appKeys": {
+        "message": 1,
+        "status": 0
+    },
+    "capabilities": [
+        "configurable"
+    ],
+    "companyName": "dan@danlofaro.com",
+    "longName": "Lofaro Labs Robot Control Pan-Tilt",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/Robot-Wrist-Ctrl.png",
+                "name": "MAIN_LOGO_IDENTIFIER",
+                "type": "png"
+            },
+            {
+                "file": "images/pebble-lofarolabs-icon-main.png",
+                "menuIcon": true,
+                "name": "LOFARO_LABS_ICON_SMALL",
+                "type": "png"
+            },
+            {
+                "file": "images/pebble-lofarolabs.png",
+                "name": "LOFARO_LABS_FRONT_IDENTIFIER",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "2",
+    "shortName": "LL-Robot-Ctrl-PT",
+    "uuid": "005a92c2-6890-43e0-9f07-b8a9638aa080",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
