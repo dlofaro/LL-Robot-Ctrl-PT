@@ -1,7 +1,7 @@
 sudo ls >> /dev/null
 echo 'deb http://code.golems.org/debian squeeze golems.org' | sudo tee --append /etc/apt/sources.list
 sudo apt-get update
-apt-get install openbsd-inetd
+sudo apt-get install openbsd-inetd
 sudo apt-get install build-essential
 sudo apt-get install python-dev
 sudo apt-get install linux-headers-$(uname -r)
