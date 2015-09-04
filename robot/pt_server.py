@@ -1,0 +1,219 @@
+#!/usr/bin/env python
+# /* -*-  indent-tabs-mode:t; tab-width: 8; c-basic-offset: 8  -*- */
+# /*
+# Copyright (c) 2015, Daniel M. Lofaro
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of the author nor the names of its contributors may
+#       be used to endorse or promote products derived from this software
+#       without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Based on: https://github.com/thedancomplex/pydynamixel
+# */
+
+import os
+import dynamixel
+import time
+import random
+import sys
+import subprocess
+import optparse
+import yaml
+import numpy as np
+
+
+# Hubo-ach stuff
+import ll_robot_ctrl_pt_h as pt
+import ach
+from ctypes import *
+
+
+# Open up ach
+# state
+s = ach.Channel(pt.ACH_CHAN)
+state = pt.LL_CTRL_PT()
+
+
+
+
+
+def rad2dyn(rad):
+    ax12rat = 300.0/360.0
+    return np.int(np.floor( (rad + (np.pi*ax12rat) )/((2.0 * np.pi) * ax12rat) * 1023.0 ))
+
+def dyn2rad(en):
+    return en * (1.0 / 1023.0 * 2.0 * np.pi - np.pi) * (300.0 / 360.0)
+
+def main(settings):
+    portName = settings['port']
+    baudRate = settings['baudRate']
+    highestServoId = settings['highestServoId']
+
+    # Establish a serial connection to the dynamixel network.
+    # This usually requires a USB2Dynamixel
+    serial = dynamixel.SerialStream(port=portName, baudrate=baudRate, timeout=1)
+    net = dynamixel.DynamixelNetwork(serial)
+    
+    # Ping the range of servos that are attached
+    print "Scanning for Dynamixels..."
+    net.scan(1, highestServoId)
+    
+    myActuators = []
+    
+    for dyn in net.get_dynamixels():
+        print dyn.id
+        myActuators.append(net[dyn.id])
+    
+    if not myActuators:
+      print 'No Dynamixels Found!'
+      sys.exit(0)
+    else:
+      print "...Done"
+    
+    for actuator in myActuators:
+        print actuator
+        actuator.moving_speed = 250
+        actuator.synchronized = True
+        actuator.torque_enable = True
+        actuator.torque_limit = 800
+        actuator.max_torque = 800
+    
+    # Randomly vary servo position within a small range
+    print myActuators
+    print "PT server active"
+#    print "Servo \tPosition"
+    while True:
+        [statuss, framesizes] = s.get(state, wait=False, last=False)
+        for actuator in myActuators:
+            if ( actuator.id == 1):
+                actuator.goal_position = rad2dyn(state.pan/180.0 * np.pi)
+                #actuator.goal_position = rad2dyn(state.joint[ha.NKY].ref)
+            if ( actuator.id == 2):
+                actuator.goal_position = rad2dyn(state.joint[ha.NK1].ref)
+            if ( actuator.id == 3):
+                actuator.goal_position = rad2dyn(state.joint[ha.NK2].ref)
+            if ( actuator.id == 5):
+                actuator.goal_position = rad2dyn(-state.tilt/180.0 * np.pi)
+        print state.pan, ' - ', state.tilt
+        net.synchronize()
+
+
+        for actuator in myActuators:
+            actuator.read_all()
+            time.sleep(0.01)
+#            if ( actuator.id == 1):
+#                encoder.enc[ha.NKY] = dyn2rad(actuator.current_position)
+#            if ( actuator.id == 2):
+#                encoder.enc[ha.NK1] = dyn2rad(actuator.current_position)
+#            if ( actuator.id == 3):
+#                encoder.enc[ha.NK2] = dyn2rad(actuator.current_position)
+#	print encoder.enc[ha.NKY], " : ", encoder.enc[ha.NK1], " : ", encoder.enc[ha.NK2]
+        time.sleep(0.02)
+
+def validateInput(userInput, rangeMin, rangeMax):
+    '''
+    Returns valid user input or None
+    '''
+    try:
+        inTest = int(userInput)
+        if inTest < rangeMin or inTest > rangeMax:
+            print "ERROR: Value out of range [" + str(rangeMin) + '-' + str(rangeMax) + "]"
+            return None
+    except ValueError:
+        print("ERROR: Please enter an integer")
+        return None
+    
+    return inTest
+
+if __name__ == '__main__':
+    
+    parser = optparse.OptionParser()
+    parser.add_option("-c", "--clean",
+                      action="store_true", dest="clean", default=False,
+                      help="Ignore the settings.yaml file if it exists and \
+                      prompt for new settings.")
+    
+    (options, args) = parser.parse_args()
+    
+    # Look for a settings.yaml file
+    settingsFile = 'settings.yaml'
+    if not options.clean and os.path.exists(settingsFile):
+        with open(settingsFile, 'r') as fh:
+            settings = yaml.load(fh)
+    # If we were asked to bypass, or don't have settings
+    else:
+        settings = {}
+        if os.name == "posix":
+            portPrompt = "Which port corresponds to your USB2Dynamixel? \n"
+            # Get a list of ports that mention USB
+            try:
+                possiblePorts = subprocess.check_output('ls /dev/ | grep -i usb',
+                                                        shell=True).split()
+                possiblePorts = ['/dev/' + port for port in possiblePorts]
+            except subprocess.CalledProcessError:
+                sys.exit("USB2Dynamixel not found. Please connect one.")
+                
+            counter = 1
+            portCount = len(possiblePorts)
+            for port in possiblePorts:
+                portPrompt += "\t" + str(counter) + " - " + port + "\n"
+                counter += 1
+            portPrompt += "Enter Choice: "
+            portChoice = None
+            while not portChoice:                
+                portTest = raw_input(portPrompt)
+                portTest = validateInput(portTest, 1, portCount)
+                if portTest:
+                    portChoice = possiblePorts[portTest - 1]
+
+        else:
+            portPrompt = "Please enter the port name to which the USB2Dynamixel is connected: "
+            portChoice = raw_input(portPrompt)
+    
+        settings['port'] = portChoice
+        
+        # Baud rate
+        baudRate = None
+        while not baudRate:
+            brTest = raw_input("Enter baud rate [Default: 1000000 bps]:")
+            if not brTest:
+                baudRate = 1000000
+            else:
+                baudRate = validateInput(brTest, 9600, 1000000)
+                    
+        settings['baudRate'] = baudRate
+        
+        # Servo ID
+        highestServoId = None
+        while not highestServoId:
+            hsiTest = raw_input("Please enter the highest ID of the connected servos: ")
+            highestServoId = validateInput(hsiTest, 1, 255)
+        
+        settings['highestServoId'] = highestServoId
+        
+        # Save the output settings to a yaml file
+        with open(settingsFile, 'w') as fh:
+            yaml.dump(settings, fh)
+            print("Your settings have been saved to 'settings.yaml'. \nTo " +
+                   "change them in the future either edit that file or run " +
+                   "this example with -c.")
+    
+    main(settings)

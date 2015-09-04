@@ -1,0 +1,8 @@
+pip install pyserial
+pip install pydynamixel
+
+or 
+
+git clone https://github.com/richard-clark/pydynamixel
+cd pydynamixel
+python setup.py install
