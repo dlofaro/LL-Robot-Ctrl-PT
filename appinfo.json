@@ -12,8 +12,8 @@
     "resources": {
         "media": [
             {
-                "file": "images/Robot-Wrist-Ctrl.png",
-                "name": "MAIN_LOGO_IDENTIFIER",
+                "file": "images/pebble-lofarolabs.png",
+                "name": "LOFARO_LABS_FRONT_IDENTIFIER",
                 "type": "png"
             },
             {
@@ -23,8 +23,8 @@
                 "type": "png"
             },
             {
-                "file": "images/pebble-lofarolabs.png",
-                "name": "LOFARO_LABS_FRONT_IDENTIFIER",
+                "file": "images/Robot-Wrist-Ctrl.png",
+                "name": "MAIN_LOGO_IDENTIFIER",
                 "type": "png"
             }
         ]
